@@ -100,13 +100,13 @@ cars = cars[0:sample_size]
 notcars = notcars[0:sample_size]
 
 ### TODO: Tweak these parameters and see how the results change.
-color_space = 'HSV' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+color_space = 'HLS' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
 orient = 9
 pix_per_cell = 8
 cell_per_block = 2
 hog_channel = 'ALL' # Can be 0, 1, 2, or "ALL"
 spatial_size = (16, 16)
-hist_bins = 32
+hist_bins = 16
 spatial_feat = True
 hist_feat = True
 hog_feat = True
@@ -160,8 +160,8 @@ image = image.astype(np.float32)/255
 windows = []
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[350, 550], 
                     xy_window=(96, 96), xy_overlap=(0.5, 0.5))
-windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[300, 600], 
-                    xy_window=(96*1.5, 96*1.5), xy_overlap=(0.5, 0.5))
+windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[200, 700], 
+                    xy_window=(144, 144), xy_overlap=(0.5, 0.5))
 
 hot_windows = search_windows(image, windows, svc, X_scaler, color_space=color_space, 
                         spatial_size=spatial_size, hist_bins=hist_bins, 
@@ -172,6 +172,27 @@ hot_windows = search_windows(image, windows, svc, X_scaler, color_space=color_sp
 
 window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)                    
 
-plt.imshow(window_img)
-plt.show()
+# This function will draw boxes on the image
+# Input: Original image
+# Output: Original image with boxes
+def process_image(image):
+    # save a raw image
+    draw_image = np.copy(image)
+    # Normalize image
+    image = image.astype(np.float32)/255
+    # Apply pipeline to the image to create black and white image
+    hot_windows = search_windows(image, windows, svc, X_scaler, color_space=color_space, 
+                        spatial_size=spatial_size, hist_bins=hist_bins, 
+                        orient=orient, pix_per_cell=pix_per_cell, 
+                        cell_per_block=cell_per_block, 
+                        hog_channel=hog_channel, spatial_feat=spatial_feat, 
+                        hist_feat=hist_feat, hog_feat=hog_feat)                       
+    # Return the original image with boxes    
+    return draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)  
+
+# Draw boxes on a video stream
+white_output = './../Car-Tracking-Data/white.mp4'
+clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened2.mp4')
+white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
+white_clip.write_videofile(white_output, audio=False)
 
