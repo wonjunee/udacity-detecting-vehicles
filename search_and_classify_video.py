@@ -95,7 +95,7 @@ print("cars size:", len(cars))
 print("notcars size:", len(notcars))
 # Reduce the sample size because
 # The quiz evaluator times out after 13s of CPU time
-sample_size = 1000
+sample_size = 8000
 cars = cars[0:sample_size]
 notcars = notcars[0:sample_size]
 
@@ -159,8 +159,10 @@ draw_image = np.copy(image)
 image = image.astype(np.float32)/255
 windows = []
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[350, 550], 
-                    xy_window=(96, 96), xy_overlap=(0.5, 0.5))
-windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[200, 700], 
+                    xy_window=(96, 96), xy_overlap=(0.75, 0.75))
+windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[300, 600], 
+                    xy_window=(144, 144), xy_overlap=(0.5, 0.5))
+windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[300, 600], 
                     xy_window=(144, 144), xy_overlap=(0.5, 0.5))
 
 hot_windows = search_windows(image, windows, svc, X_scaler, color_space=color_space, 
