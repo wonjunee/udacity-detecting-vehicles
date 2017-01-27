@@ -9,6 +9,8 @@ from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
 from sklearn.model_selection import train_test_split
+### Import everything needed to edit/save/watch video clips
+from moviepy.editor import VideoFileClip
 
 def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
                         hist_bins=32, hist_range=(0, 256), orient=9, 
