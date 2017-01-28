@@ -146,3 +146,72 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
         cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
     # Return the image copy with boxes drawn
     return imcopy
+
+def search_windows(img, windows, clf, scaler, color_space='RGB', 
+                    spatial_size=(32, 32), hist_bins=32, 
+                    hist_range=(0, 256), orient=9, 
+                    pix_per_cell=8, cell_per_block=2, 
+                    hog_channel=0, spatial_feat=True, 
+                    hist_feat=True, hog_feat=True):
+
+    on_windows = []
+    for window in windows:
+        test_img = cv2.resize(img[window[0][1]:window[1][1], window[0][0]:window[1][0]], (64, 64))      
+        features = single_img_features(test_img, color_space=color_space, 
+                            spatial_size=spatial_size, hist_bins=hist_bins, 
+                            orient=orient, pix_per_cell=pix_per_cell, 
+                            cell_per_block=cell_per_block, 
+                            hog_channel=hog_channel, spatial_feat=spatial_feat, 
+                            hist_feat=hist_feat, hog_feat=hog_feat)
+        
+        test_features = scaler.transform(np.array(features).reshape(1, -1))
+        prediction = clf.predict(test_features)
+        if prediction == 1:
+            on_windows.append(window)
+
+    return on_windows
+
+
+def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
+                        hist_bins=32, hist_range=(0, 256), orient=9, 
+                        pix_per_cell=8, cell_per_block=2, hog_channel=0,
+                        spatial_feat=True, hist_feat=True, hog_feat=True):    
+    img_features = []
+    # apply color conversion if other than 'RGB'
+    if color_space != 'RGB':
+        if color_space == 'HSV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        elif color_space == 'LUV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
+        elif color_space == 'HLS':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+        elif color_space == 'YUV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YUV)
+        elif color_space == 'YCrCb':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
+    else: feature_image = np.copy(img)      
+
+    if spatial_feat == True:
+        spatial_features = bin_spatial(feature_image, size=spatial_size)
+        img_features.append(spatial_features)
+    if hist_feat == True:
+        # Apply color_hist()
+        hist_features = color_hist(feature_image, nbins=hist_bins, 
+                                    bins_range=hist_range)
+        img_features.append(hist_features)
+    if hog_feat == True:
+    # Call get_hog_features() with vis=False, feature_vec=True
+        if hog_channel == 'ALL':
+            hog_features = []
+            for channel in range(feature_image.shape[2]):
+                hog_features.extend(get_hog_features(feature_image[:,:,channel], 
+                                    orient, pix_per_cell, cell_per_block, 
+                                    vis=False, feature_vec=True))      
+        else:
+            hog_features = get_hog_features(feature_image[:,:,hog_channel], orient, 
+                        pix_per_cell, cell_per_block, vis=False, feature_vec=True)
+        # Append the new feature vector to the features list
+        img_features.append(hog_features)
+
+    # Return list of feature vectors
+    return np.concatenate(img_features)
