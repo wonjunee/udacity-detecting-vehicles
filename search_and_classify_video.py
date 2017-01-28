@@ -9,7 +9,7 @@ from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import hog
 from sklearn.model_selection import train_test_split
-### Import everything needed to edit/save/watch video clips
+# Import a library needed to edit/save/watch video clips
 from moviepy.editor import VideoFileClip
 
 # Read in cars and notcars
@@ -126,8 +126,8 @@ def process_image(image):
     return draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)  
 
 # Draw boxes on a video stream
-white_output = './../Car-Tracking-Data/white.mp4'
-clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened2.mp4')
+white_output = './../Car-Tracking-Data/white.mp4' # New video
+clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened2.mp4') # Original video
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
 
