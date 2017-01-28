@@ -28,7 +28,7 @@ print("cars size:", len(cars))
 print("notcars size:", len(notcars))
 # Reduce the sample size because
 # The quiz evaluator times out after 13s of CPU time
-sample_size = 1000
+sample_size = 8000
 cars = cars[0:sample_size]
 notcars = notcars[0:sample_size]
 
@@ -139,7 +139,7 @@ def process_image(image):
 Window = Window()
 # Draw boxes on a video stream
 white_output = './../Car-Tracking-Data/white.mp4' # New video
-clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened2.mp4') # Original video
+clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened3.mp4') # Original video
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
 
