@@ -1,7 +1,9 @@
+import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import cv2
-from skimage.feature import hog
+import copy
+from skimage.feature import hog, blob_doh, peak_local_max
 # Define a function to return HOG features and visualization
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, 
                         vis=False, feature_vec=True):
@@ -215,3 +217,89 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
 
     # Return list of feature vectors
     return np.concatenate(img_features)
+
+# Combine overlapping boxes
+def combine_boxes2(windows):
+    # sort by startx and starty
+    windows = sorted(windows, key=lambda x: x[0])
+    stop = True
+    # Create an empty array
+    new_windows = []
+    while stop:
+        # Stop when windows array is empty
+        if len(windows) == 0:
+            stop = False
+        else:
+            # Take the first window from the array
+            window = windows[0]
+            startx, starty = window[0]
+            endx, endy = window[1]
+            # Remove the first window from the array
+            windows.remove(window)
+            # Temporary windows
+            temp_windows = copy.copy(windows)
+            # Iterate through the windows and search for overlapping windows
+            for i in range(len(temp_windows)):
+                startx1, starty1 = temp_windows[i][0]
+                endx1, endy1 = temp_windows[i][1]
+                if (endx1 >= startx and endx1 <= endx and \
+                    endy1 >= starty and endy1 <= endy) or \
+                    (startx1 >= startx and startx1 <= endx and \
+                    starty1 >= starty and starty1 <= endy) or \
+                    (startx1 >= startx and startx1 <= endx and \
+                    endy1 >= starty and endy1 <= endy) or \
+                    (endx1 >= startx and endx1 <= endx and \
+                    starty1 >= starty and starty1 <= endy):
+
+                    startx = min(startx, startx1)
+                    starty = min(starty, starty1)
+                    endx = max(endx, endx1)
+                    endy = max(endy, endy1)
+                    windows.remove(temp_windows[i])
+            # If the window is combined with others then
+            # append it to the new windows
+            new_windows.append(((startx, starty), (endx, endy)))
+    # Return a new array that contains combined boxes
+    return new_windows
+
+# Combine overlapping boxes
+def create_heatmap(windows, image_shape):
+    background = np.zeros(image_shape[:2])
+    for window in windows:
+        startx, starty = window[0]
+        endx, endy = window[1]
+        background[starty:endy, startx:endx] += 1
+    return background
+
+def blobs_to_windows(blobs):
+    windows = []
+    for blob in blobs:
+        y, x, r = blob
+        windows.append(((int(x-r*.7), int(y-r*.7)), (int(x+r*.7), int(y+r*.7))))
+    return windows
+
+def combine_boxes(windows, image_shape, max_sigma=200, threshold=0.08):
+    if len(windows)>0:
+        hot_windows = create_heatmap(windows, image_shape)
+        if np.sum(hot_windows)>0:
+            blobs = blob_doh(hot_windows, max_sigma=max_sigma, threshold=threshold)
+            return blobs_to_windows(blobs)
+
+
+# Define a class to receive the characteristics of each line detection
+class Window():
+    def __init__(self):
+        # windows for the most recent image
+        self.current_windows = []
+        # windows for the previous image
+        self.previous_windows = []
+
+def average_boxes(windows):
+
+    if len(Window.current_windows) == 0:
+        Window.current_windows = windows
+    else:
+        Window.previous_windows = Window.current_windows
+        Window.current_windows = windows
+
+        
