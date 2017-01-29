@@ -5,7 +5,9 @@ import cv2
 import copy
 from scipy import ndimage as ndi
 from skimage.feature import hog, blob_doh, peak_local_max
-from skimage.morphology import watershed
+from skimage.morphology import watershed, disk
+from skimage.filters import rank, gaussian_filter
+from skimage.util import img_as_ubyte
 # Define a function to return HOG features and visualization
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, 
                         vis=False, feature_vec=True):
@@ -231,37 +233,48 @@ def create_heatmap(windows, image_shape):
 
 # Combine boxes
 def combine_boxes(windows, image_shape, max_sigma=200, threshold=0.08):
+    hot_windows = []
     if len(windows)>0:
         # Create heatmap with windows
         image = create_heatmap(windows, image_shape)
-        # Find blobs from the heatmap
-        blobs = blob_doh(image, max_sigma=max_sigma, threshold=threshold)
         # Create an array for indices
         y, x = np.indices(image_shape[:2])
         # Turn every nonzero to one
-        image[image>0] = 1
-
+        # image = image.astype(np.float32)
+        # image[image>0] = 1
+        image = gaussian_filter(image, 1.0)
+        # Smooth the image
+        image = rank.mean(image, disk(5))
         # Use watershed to find the extend of each box
+        # markers = rank.gradient(image, disk(5)) < 10        
+
+        # Find blobs from the heatmap
+        blobs = blob_doh(image, max_sigma=max_sigma, threshold=threshold)
+        # markers = ndi.label(markers)[0]
         distance = ndi.distance_transform_edt(image)
-        local_maxi = peak_local_max(distance, indices=False, 
-                                    footprint=np.ones((3, 3)),
-                                    labels=image)
+        # distance = ndi.distance_transform_edt(markers)
+        local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((50, 50)),
+                            labels=image)
+        # local_maxi = np.zeros(image_shape[:2], dtype=bool)
+        for blob in blobs:
+            y, x, r = blob
+            local_maxi[int(y-20):int(y+20) ,int(x-20):int(x+20)] = True
         markers = ndi.label(local_maxi)[0]
         labels = watershed(-distance, markers, mask=image)
 
         # Filter boxes where the blobs are inside the boxes
-        hot_windows = []
         for blob in blobs:
             y, x, r = blob
             num = labels[int(y), int(x)]
-            im = np.zeros(image_shape[:2])
-            im[labels == num] = 1
-            starty = np.min(np.argwhere(im)[:,0])
-            startx = np.min(np.argwhere(im)[:,1])
-            endy = np.max(np.argwhere(im)[:,0])
-            endx = np.max(np.argwhere(im)[:,1])
-            hot_windows.append(((int(startx), int(starty)), (int(endx), int(endy))))
-        return hot_windows
+            if num > 0:
+                im = np.zeros(image_shape[:2])
+                im[labels == num] = 1
+                starty = np.min(np.argwhere(im)[:,0])
+                startx = np.min(np.argwhere(im)[:,1])
+                endy = np.max(np.argwhere(im)[:,0])
+                endx = np.max(np.argwhere(im)[:,1])
+                hot_windows.append(((int(startx), int(starty)), (int(endx), int(endy))))
+    return hot_windows, labels
 
 # Define a class to receive the characteristics of each line detection
 class Window():
@@ -272,7 +285,6 @@ class Window():
         self.previous_windows = []
 
 def average_boxes(windows):
-
     if len(Window.current_windows) == 0:
         Window.current_windows = windows
     else:

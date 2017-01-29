@@ -45,7 +45,6 @@ hist_feat = True
 hog_feat = True
 
 max_sigma = 200
-threshold = 0.1
 
 car_features = extract_features(cars, color_space=color_space, 
                         spatial_size=spatial_size, hist_bins=hist_bins, 
@@ -79,7 +78,7 @@ print('Using:',orient,'orientations',pix_per_cell,
     'pixels per cell and', cell_per_block,'cells per block')
 print('Feature vector length:', len(X_train[0]))
 # Use a linear SVC 
-svc = LinearSVC()
+svc = LinearSVC(max_iter=10000)
 # Check the training time for the SVC
 t=time.time()
 svc.fit(X_train, y_train)
@@ -91,8 +90,6 @@ print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
 t=time.time()
 
 image = mpimg.imread('./../Car-Tracking-Data/examples/test3.jpg')
-draw_image = np.copy(image)
-image = image.astype(np.float32)/255
 
 windows = []
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[350, 550], 
@@ -118,28 +115,27 @@ def process_image(image):
                         hog_channel=hog_channel, spatial_feat=spatial_feat, 
                         hist_feat=hist_feat, hog_feat=hog_feat)
     # Combine overlapping windows
-    hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=threshold)
+    # hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.15)
     # Average over windows with previous windows
     if len(Window.current_windows) == 0:
-        pass
+        hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.2)
     elif len(Window.previous_windows) == 0:
         hot_windows += Window.current_windows
-        hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.2)
+        hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.3)
     else:
         hot_windows += Window.current_windows
         hot_windows += Window.previous_windows
         hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.4)
     Window.previous_windows = Window.current_windows
-    if len(hot_windows) == 0:
-        hot_windows = Window.current_windows    
-    Window.current_windows = hot_windows
+    if len(hot_windows) > 0:
+        Window.current_windows = hot_windows
     # Return the original image with boxes    
     return draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)  
 
 Window = Window()
 # Draw boxes on a video stream
 white_output = './../Car-Tracking-Data/white.mp4' # New video
-clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened3.mp4') # Original video
+clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened2.mp4') # Original video
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
 
