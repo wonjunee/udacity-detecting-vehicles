@@ -265,11 +265,11 @@ def combine_boxes(windows, image_shape):
 class Window():
     def __init__(self):
         # windows for the most recent image
-        self.current_windows = []
+        self.windows1 = []
         # windows for the previous image
-        self.previous_windows = []
+        self.windows2 = []
         # windows with high probability
-        self.probability_windows = []
+        self.windows3 = []
 
 # Calculate the distance between two points
 def calc_distance(a, b):
@@ -297,3 +297,4 @@ def average_windows(box1, box2):
     return ((x-width, y-width), (x+width, y+width))
 
 def average_boxes(hot_windows, previous, probability, image_shape):
+g
