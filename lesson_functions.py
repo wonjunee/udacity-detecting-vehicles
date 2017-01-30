@@ -229,13 +229,17 @@ def create_heatmap(windows, image_shape):
         background[window[0][1]:window[1][1], window[0][0]:window[1][0]] += 1
     return background
 
-def find_windows_from_heatmap(image, thres=1):
+def find_windows_from_heatmap(image):
     hot_windows = []
     # Turn every nonzero to one
-    # image = image.astype(np.uint8)
+    image = image.astype(np.uint8)
     # Smooth the image
-    # image = rank.mean(image, disk(2))
-    # Threshold the heatmap      
+    image = rank.mean(image, disk(2))
+    # Threshold the heatmap
+    if np.unique(image)[-1] <= 3:
+        thres = 0
+    else:
+        thres = 1      
     image[image <= thres] = 0
     # Set labels
     labels = ndi.label(image)
@@ -251,13 +255,13 @@ def find_windows_from_heatmap(image, thres=1):
         hot_windows.append(bbox)
     return hot_windows, labels[0]
 
-def combine_boxes(windows, image_shape, thres=1):
+def combine_boxes(windows, image_shape):
     hot_windows = []
     if len(windows)>0:
         # Create heatmap with windows
         image = create_heatmap(windows, image_shape)
         # find boxes from heatmap
-        hot_windows, labels = find_windows_from_heatmap(image, thres)
+        hot_windows, labels = find_windows_from_heatmap(image)
     return hot_windows, labels
 
 # Define a class to receive the characteristics of each line detection
@@ -297,14 +301,13 @@ def average_windows(box1, box2):
 
 def average_boxes(hot_windows, windows1, windows2, windows3,
                   image_shape):
-    hot_heatmap = create_heatmap(hot_windows, image_shape) * 3
+    hot_heatmap = create_heatmap(hot_windows, image_shape) * 2
     heatmap1 = create_heatmap(windows1, image_shape)
     heatmap2 = create_heatmap(windows2, image_shape)
     heatmap3 = create_heatmap(windows3, image_shape)
     new_heatmap = hot_heatmap + heatmap1 + heatmap2 + heatmap3
-    new_heatmap = (new_heatmap.astype(np.float32) / 6.0).astype(np.uint8)
-    plt.imshow(new_heatmap, cmap="hot")
-    plt.title(np.unique(new_heatmap))
-    plt.show()
+    # plt.imshow(new_heatmap, cmap="hot")
+    # plt.title(np.unique(new_heatmap))
+    # plt.show()
     windows, _ = find_windows_from_heatmap(new_heatmap)
     return windows

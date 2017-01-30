@@ -63,13 +63,13 @@ image = mpimg.imread('./../Car-Tracking-Data/examples/test3.jpg')
 
 windows = []
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[380, 520], 
-                    xy_window=(48, 48), xy_overlap=(0.5, 0.5))
+                    xy_window=(64, 64), xy_overlap=(0.5, 0.5))
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[350, 550], 
-                    xy_window=(96, 96), xy_overlap=(0.75, 0.75))
+                    xy_window=(96, 96), xy_overlap=(0.5, 0.5))
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[300, 600], 
-                    xy_window=(144, 144), xy_overlap=(0.75, 0.75))
-windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[250, 650], 
-                    xy_window=(192, 192), xy_overlap=(0.75, 0.75))
+                    xy_window=(144, 144), xy_overlap=(0.5, 0.5))
+# windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[250, 650], 
+#                     xy_window=(192, 192), xy_overlap=(0.5, 0.5))
 
 # This function will draw boxes on the image
 # Input: Original image
@@ -107,7 +107,7 @@ def process_image(image):
 Window = Window()
 # Draw boxes on a video stream
 white_output = './../Car-Tracking-Data/white.mp4' # New video
-clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened4.mp4') # Original video
+clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened3.mp4') # Original video
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
 
