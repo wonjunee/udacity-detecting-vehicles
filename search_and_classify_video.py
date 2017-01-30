@@ -1,6 +1,7 @@
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
 import cv2
 import glob
 import time
@@ -12,71 +13,40 @@ from sklearn.model_selection import train_test_split
 # Import a library needed to edit/save/watch video clips
 from moviepy.editor import VideoFileClip
 
-# Read in cars and notcars
-cars = []
-notcars = []
+# Reload the data
+pickle_file = './../Car-Tracking-Data/features.pickle'
+with open(pickle_file, 'rb') as f:
+    pickle_data = pickle.load(f)
+    X_train = pickle_data['train_dataset']
+    y_train = pickle_data['train_labels']
+    X_test = pickle_data['test_dataset']
+    y_test = pickle_data['test_labels']
+    X_scaler = pickle_data['X_scaler']
+    parameters = pickle_data['parameters']
+    del pickle_data  # Free up memory
 
-cars_images = glob.glob('./../Car-Tracking-Data/vehicles/*')
-for folder in cars_images:
-    cars += glob.glob('{}/*.png'.format(folder))
+print('Data and modules loaded.')
+print("train_features size:", X_train.shape)
+print("train_labels size:", y_train.shape)
+print("test_features size:", X_test.shape)
+print("test_labels size:", y_test.shape)
+for k in parameters:
+    print(k, ":", parameters[k])
 
-notcars_images = glob.glob('./../Car-Tracking-Data/non-vehicles/*')
-for folder in notcars_images:
-    notcars += glob.glob('{}/*.png'.format(folder))
+color_space = parameters['color_space']
+orient = parameters['orient']
+pix_per_cell = parameters['pix_per_cell']
+cell_per_block = parameters['cell_per_block']
+hog_channel = parameters['hog_channel']
+spatial_size = parameters['spatial_size']
+hist_bins = parameters['hist_bins']
+spatial_feat = parameters['spatial_feat']
+hist_feat = parameters['hist_feat']
+hog_feat = parameters['hog_feat']
 
-print("cars size:", len(cars))
-print("notcars size:", len(notcars))
-# Reduce the sample size because
-# The quiz evaluator times out after 13s of CPU time
-sample_size = 8000
-cars = cars[0:sample_size]
-notcars = notcars[0:sample_size]
-
-### TODO: Tweak these parameters and see how the results change.
-color_space = 'YCrCb' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
-orient = 8
-pix_per_cell = 8
-cell_per_block = 2
-hog_channel = 'ALL' # Can be 0, 1, 2, or "ALL"
-spatial_size = (16, 16)
-hist_bins = 32
-spatial_feat = True
-hist_feat = True
-hog_feat = True
-
-max_sigma = 200
-
-car_features = extract_features(cars, color_space=color_space, 
-                        spatial_size=spatial_size, hist_bins=hist_bins, 
-                        orient=orient, pix_per_cell=pix_per_cell, 
-                        cell_per_block=cell_per_block, 
-                        hog_channel=hog_channel, spatial_feat=spatial_feat, 
-                        hist_feat=hist_feat, hog_feat=hog_feat)
-notcar_features = extract_features(notcars, color_space=color_space, 
-                        spatial_size=spatial_size, hist_bins=hist_bins, 
-                        orient=orient, pix_per_cell=pix_per_cell, 
-                        cell_per_block=cell_per_block, 
-                        hog_channel=hog_channel, spatial_feat=spatial_feat, 
-                        hist_feat=hist_feat, hog_feat=hog_feat)
-
-X = np.vstack((car_features, notcar_features)).astype(np.float64)                        
-# Fit a per-column scaler
-X_scaler = StandardScaler().fit(X)
-# Apply the scaler to X
-scaled_X = X_scaler.transform(X)
-
-# Define the labels vector
-y = np.hstack((np.ones(len(car_features)), np.zeros(len(notcar_features))))
-
-
-# Split up data into randomized training and test sets
-rand_state = np.random.randint(0, 100)
-X_train, X_test, y_train, y_test = train_test_split(
-    scaled_X, y, test_size=0.2, random_state=rand_state)
-
-print('Using:',orient,'orientations',pix_per_cell,
+print('\nUsing:',orient,'orientations',pix_per_cell,
     'pixels per cell and', cell_per_block,'cells per block')
-print('Feature vector length:', len(X_train[0]))
+
 # Use a linear SVC 
 svc = LinearSVC(max_iter=10000)
 # Check the training time for the SVC
@@ -92,6 +62,8 @@ t=time.time()
 image = mpimg.imread('./../Car-Tracking-Data/examples/test3.jpg')
 
 windows = []
+windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[370, 530], 
+                    xy_window=(48, 48), xy_overlap=(0.5, 0.5))
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[350, 550], 
                     xy_window=(96, 96), xy_overlap=(0.75, 0.75))
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[300, 600], 
@@ -115,22 +87,15 @@ def process_image(image):
                         hog_channel=hog_channel, spatial_feat=spatial_feat, 
                         hist_feat=hist_feat, hog_feat=hog_feat)
     # Combine overlapping windows
-    # hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.15)
-    # Average over windows with previous windows
-    if len(Window.current_windows) == 0:
-        hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.2)
-    elif len(Window.previous_windows) == 0:
-        hot_windows += Window.current_windows
-        hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.3)
-    else:
-        hot_windows += Window.current_windows
-        hot_windows += Window.previous_windows
-        hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.4)
-    Window.previous_windows = Window.current_windows
-    if len(hot_windows) > 0:
-        Window.current_windows = hot_windows
-    # Return the original image with boxes    
-    return draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)  
+    hot_windows = combine_boxes(hot_windows, image.shape)
+    # Average windows over windows from previous frames
+    results = average_boxes(hot_windows, Window.previous_windows, Window.probability_windows, image.shape)
+    # Reassign window values in a class
+    Window.previous_windows = hot_windows
+    Window.probability_windows = results
+
+    # Return an image with boxes drawn
+    return draw_boxes(draw_image, results, color=(0, 0, 255), thick=6)  
 
 Window = Window()
 # Draw boxes on a video stream

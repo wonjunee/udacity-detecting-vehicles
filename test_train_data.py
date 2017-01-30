@@ -28,7 +28,7 @@ print("cars size:", len(cars))
 print("notcars size:", len(notcars))
 # Reduce the sample size because
 # The quiz evaluator times out after 13s of CPU time
-sample_size = 500
+sample_size = 8750
 cars = cars[0:sample_size]
 notcars = notcars[0:sample_size]
 
@@ -39,7 +39,7 @@ pix_per_cell = 8
 cell_per_block = 2
 hog_channel = 'ALL' # Can be 0, 1, 2, or "ALL"
 spatial_size = (16, 16)
-hist_bins = 16
+hist_bins = 32
 spatial_feat = True
 hist_feat = True
 hog_feat = True

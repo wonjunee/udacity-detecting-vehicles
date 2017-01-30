@@ -3,6 +3,7 @@ import matplotlib.image as mpimg
 import numpy as np
 import cv2
 import copy
+import math
 from scipy import ndimage as ndi
 from skimage.feature import hog, blob_doh, peak_local_max
 from skimage.morphology import watershed, disk
@@ -222,59 +223,43 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
     # Return list of feature vectors
     return np.concatenate(img_features)
 
-# Combine overlapping boxes
 def create_heatmap(windows, image_shape):
     background = np.zeros(image_shape[:2])
     for window in windows:
-        startx, starty = window[0]
-        endx, endy = window[1]
-        background[starty:endy, startx:endx] += 1
+        background[window[0][1]:window[1][1], window[0][0]:window[1][0]] += 1
     return background
 
-# Combine boxes
-def combine_boxes(windows, image_shape, max_sigma=200, threshold=0.08):
+def find_windows_from_heatmap(image):
+    hot_windows = []
+    # Turn every nonzero to one
+    # image = image.astype(np.uint8)
+    # Smooth the image
+    # image = rank.mean(image, disk(2))
+    # Threshold the heatmap      
+    thres = 1
+    image[image <= thres] = 0
+    # Set labels
+    labels = ndi.label(image)
+    # iterate through labels and find windows
+    for car_number in range(1, labels[1]+1):
+        # Find pixels with each car_number label value
+        nonzero = (labels[0] == car_number).nonzero()
+        # Identify x and y values of those pixels
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        # Define a bounding box based on min/max x and y
+        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        hot_windows.append(bbox)
+    return hot_windows
+
+def combine_boxes(windows, image_shape):
     hot_windows = []
     if len(windows)>0:
         # Create heatmap with windows
         image = create_heatmap(windows, image_shape)
-        # Create an array for indices
-        y, x = np.indices(image_shape[:2])
-        # Turn every nonzero to one
-        # image = image.astype(np.float32)
-        # image[image>0] = 1
-        image = gaussian_filter(image, 1.0)
-        # Smooth the image
-        image = rank.mean(image, disk(5))
-        # Use watershed to find the extend of each box
-        # markers = rank.gradient(image, disk(5)) < 10        
-
-        # Find blobs from the heatmap
-        blobs = blob_doh(image, max_sigma=max_sigma, threshold=threshold)
-        # markers = ndi.label(markers)[0]
-        distance = ndi.distance_transform_edt(image)
-        # distance = ndi.distance_transform_edt(markers)
-        local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((50, 50)),
-                            labels=image)
-        # local_maxi = np.zeros(image_shape[:2], dtype=bool)
-        for blob in blobs:
-            y, x, r = blob
-            local_maxi[int(y-20):int(y+20) ,int(x-20):int(x+20)] = True
-        markers = ndi.label(local_maxi)[0]
-        labels = watershed(-distance, markers, mask=image)
-
-        # Filter boxes where the blobs are inside the boxes
-        for blob in blobs:
-            y, x, r = blob
-            num = labels[int(y), int(x)]
-            if num > 0:
-                im = np.zeros(image_shape[:2])
-                im[labels == num] = 1
-                starty = np.min(np.argwhere(im)[:,0])
-                startx = np.min(np.argwhere(im)[:,1])
-                endy = np.max(np.argwhere(im)[:,0])
-                endx = np.max(np.argwhere(im)[:,1])
-                hot_windows.append(((int(startx), int(starty)), (int(endx), int(endy))))
-    return hot_windows, labels
+        # find boxes from heatmap
+        hot_windows = find_windows_from_heatmap(image)
+    return hot_windows
 
 # Define a class to receive the characteristics of each line detection
 class Window():
@@ -283,12 +268,107 @@ class Window():
         self.current_windows = []
         # windows for the previous image
         self.previous_windows = []
+        # windows with high probability
+        self.probability_windows = []
 
-def average_boxes(windows):
-    if len(Window.current_windows) == 0:
-        Window.current_windows = windows
-    else:
-        Window.previous_windows = Window.current_windows
-        Window.current_windows = windows
+# Calculate the distance between two points
+def calc_distance(a, b):
+    return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+
+def find_center(box):
+    startx, starty = box[0]
+    endx, endy = box[1]
+    # Find the center of the box
+    return [((startx+endx)/2.), ((starty+endy)/2.)]
+
+# box1 current box
+# box2 previous box
+def average_windows(box1, box2):
+    startx, starty = box1[0]
+    endx, endy = box1[1]
+    startx1, starty1 = box2[0]
+    endx1, endy1 = box2[1]
+    x, y = find_center(box1)
+    x = int(x)
+    y = int(y)
+    w = 3
+    width = int((((endx - startx) + (endx1 - startx1)*w) / (w+1))/2)
+    height = int((((endy - starty) + (endy1 - starty1)*w) / (w+1))/2)
+    return ((x-width, y-width), (x+width, y+width))
+
+def average_boxes(hot_windows, previous, probability, image_shape):
+    # if there are windows with high probabiity
+    if len(probability) > 0:
+        new_probability = []
+        notfound = []
+        for hot_window in hot_windows:
+            # Find the center of the box
+            hot_center = find_center(hot_window)
+            # iterate through hot_windows and see if it exists
+            # if exists then average the window values
+            # if not exists then add a window
+            found = 0
+            for prob_window in probability:
+                prob_center = find_center(prob_window)
+                if calc_distance(prob_center, hot_center) < 20:
+                    new_probability.append(average_windows(hot_window, prob_window))
+                    probability.remove(prob_window)
+                    found = 1
+                    break
+            # append the window if it is not exist in probability windows
+            if found == 0:
+                notfound.append(hot_window)
+        # check if the windows not found in probability windows are
+        # in the previous windows
+        for hot_window in notfound:
+            # Find the center of the box
+            hot_center = find_center(hot_window)
+            # iterate through hot_windows and see if it exists
+            # if exists then average the window values
+            # if not exists then add a window
+            for prev_window in previous:
+                prev_center = find_center(prev_window)
+                if calc_distance(prev_center, hot_center) < 20:
+                    new_probability.append(average_windows(hot_window, prev_window))
+                    break
+        return new_probability
+    elif len(probability) == 0:
+        return hot_windows
+
+
+
+
+
+
+    # results = []
+    # # If it is the second precessing
+    # if len(current) > 0:
+    #     temp_windows = copy.copy(hot_windows)
+    #     for hot_window in current:
+    #         startx, starty = hot_window[0]
+    #         endx, endy = hot_window[1]
+    #         # Find the center of the box
+    #         hot_center = [((startx+endx)/2.), ((starty+endy)/2.)]
+    #         # check each window from a previous frame
+    #         for window in temp_windows:
+    #             startx1, starty1 = window[0]
+    #             endx1, endy1 = window[1]
+    #             # Find the center of the box
+    #             center = [((startx1+endx1)/2.), ((starty1+endy1)/2.)]
+    #             # If two points are close, then save the window
+    #             if calc_distance(center, hot_center) < 20:                    
+    #                 results.append(((int((startx+startx1*2)/3), int((starty+starty1*2)/3)), (int((endx+endx1*2)/3), int((endy+endy1*2)/3))))
+    #                 temp_windows.remove(window)
+    #     previous = results + temp_windows
+    #     return results, previous
+    # elif len(current) == 0:
+    #     return hot_windows, hot_windows
+
+
+
+
+
+
+
 
         

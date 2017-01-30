@@ -54,6 +54,7 @@ svc = LinearSVC(max_iter=10000)
 t=time.time()
 svc.fit(X_train, y_train)
 t2 = time.time()
+print('')
 print(round(t2-t, 2), 'Seconds to train SVC...')
 # Check the score of the SVC
 print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
@@ -91,7 +92,7 @@ def process_image(image):
     else:
         hot_windows += Window.current_windows
         hot_windows += Window.previous_windows
-    hot_windows, labels = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.3)
+    hot_windows, labels = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.1)
     Window.previous_windows = Window.current_windows
     if len(hot_windows) > 0:
         Window.current_windows = hot_windows
