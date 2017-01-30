@@ -296,5 +296,12 @@ def average_windows(box1, box2):
     height = int((((endy - starty) + (endy1 - starty1)*w) / (w+1))/2)
     return ((x-width, y-width), (x+width, y+width))
 
-def average_boxes(hot_windows, previous, probability, image_shape):
-g
+def average_boxes(hot_windows, windows1, windows2, windows3,
+                  image_shape):
+    hot_heatmap = create_heatmap(hot_windows, image_shape) * 3
+    heatmap1 = create_heatmap(windows1, image_shape)
+    heatmap2 = create_heatmap(windows2, image_shape)
+    heatmap3 = create_heatmap(windows3, image_shape)
+    new_heatmap = hot_heatmap + heatmap1 + heatmap2 + heatmap3
+    new_heatmap = (new_heatmap.astype(np.float32) / 6.0).astype(np.uint8)
+    return find_windows_from_heatmap(new_heatmap)

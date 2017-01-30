@@ -89,7 +89,9 @@ def process_image(image):
     # Combine overlapping windows
     hot_windows = combine_boxes(hot_windows, image.shape)
     # Average windows over windows from previous frames
-    results = average_boxes(hot_windows, Window.previous_windows, Window.probability_windows, image.shape)
+    results = average_boxes(hot_windows, 
+        Window.windows1, Window.windows2, Window.windows3,
+        image.shape)
     # Reassign window values in a class
     Window.previous_windows = hot_windows
     Window.probability_windows = results
