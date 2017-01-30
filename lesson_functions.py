@@ -229,14 +229,13 @@ def create_heatmap(windows, image_shape):
         background[window[0][1]:window[1][1], window[0][0]:window[1][0]] += 1
     return background
 
-def find_windows_from_heatmap(image):
+def find_windows_from_heatmap(image, thres=1):
     hot_windows = []
     # Turn every nonzero to one
     # image = image.astype(np.uint8)
     # Smooth the image
     # image = rank.mean(image, disk(2))
     # Threshold the heatmap      
-    thres = 1
     image[image <= thres] = 0
     # Set labels
     labels = ndi.label(image)
@@ -250,16 +249,16 @@ def find_windows_from_heatmap(image):
         # Define a bounding box based on min/max x and y
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
         hot_windows.append(bbox)
-    return hot_windows
+    return hot_windows, labels[0]
 
-def combine_boxes(windows, image_shape):
+def combine_boxes(windows, image_shape, thres=1):
     hot_windows = []
     if len(windows)>0:
         # Create heatmap with windows
         image = create_heatmap(windows, image_shape)
         # find boxes from heatmap
-        hot_windows = find_windows_from_heatmap(image)
-    return hot_windows
+        hot_windows, labels = find_windows_from_heatmap(image, thres)
+    return hot_windows, labels
 
 # Define a class to receive the characteristics of each line detection
 class Window():
@@ -304,4 +303,8 @@ def average_boxes(hot_windows, windows1, windows2, windows3,
     heatmap3 = create_heatmap(windows3, image_shape)
     new_heatmap = hot_heatmap + heatmap1 + heatmap2 + heatmap3
     new_heatmap = (new_heatmap.astype(np.float32) / 6.0).astype(np.uint8)
-    return find_windows_from_heatmap(new_heatmap)
+    plt.imshow(new_heatmap, cmap="hot")
+    plt.title(np.unique(new_heatmap))
+    plt.show()
+    windows, _ = find_windows_from_heatmap(new_heatmap)
+    return windows

@@ -87,7 +87,7 @@ def process_image(image):
                         hog_channel=hog_channel, spatial_feat=spatial_feat, 
                         hist_feat=hist_feat, hog_feat=hog_feat)
     # Combine overlapping windows
-    hot_windows = combine_boxes(hot_windows, image.shape)
+    hot_windows, _ = combine_boxes(hot_windows, image.shape)
     if len(Window.windows1) == 0:
         Window.windows1 = hot_windows
         Window.windows2 = hot_windows
@@ -107,7 +107,7 @@ def process_image(image):
 Window = Window()
 # Draw boxes on a video stream
 white_output = './../Car-Tracking-Data/white.mp4' # New video
-clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened3.mp4') # Original video
+clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened4.mp4') # Original video
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
 

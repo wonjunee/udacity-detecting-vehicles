@@ -84,7 +84,7 @@ def process_image(image):
     # hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.15)
     # Average over windows with previous windows
     # Combine overlapping windows
-    hot_windows = combine_boxes(hot_windows, image.shape)
+    hot_windows, labels = combine_boxes(hot_windows, image.shape)
     if len(Window.windows1) == 0:
         Window.windows1 = hot_windows
         Window.windows2 = hot_windows
