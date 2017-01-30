@@ -62,7 +62,7 @@ t=time.time()
 image = mpimg.imread('./../Car-Tracking-Data/examples/test3.jpg')
 
 windows = []
-windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[370, 530], 
+windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[380, 520], 
                     xy_window=(48, 48), xy_overlap=(0.5, 0.5))
 windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[350, 550], 
                     xy_window=(96, 96), xy_overlap=(0.75, 0.75))
@@ -88,21 +88,26 @@ def process_image(image):
                         hist_feat=hist_feat, hog_feat=hog_feat)
     # Combine overlapping windows
     hot_windows = combine_boxes(hot_windows, image.shape)
+    if len(Window.windows1) == 0:
+        Window.windows1 = hot_windows
+        Window.windows2 = hot_windows
+        Window.windows3 = hot_windows
     # Average windows over windows from previous frames
     results = average_boxes(hot_windows, 
         Window.windows1, Window.windows2, Window.windows3,
         image.shape)
     # Reassign window values in a class
-    Window.previous_windows = hot_windows
-    Window.probability_windows = results
-
+    Window.windows3 = copy.copy(Window.windows2)
+    Window.windows2 = copy.copy(Window.windows1)
+    Window.windows1 = results
+    
     # Return an image with boxes drawn
     return draw_boxes(draw_image, results, color=(0, 0, 255), thick=6)  
 
 Window = Window()
 # Draw boxes on a video stream
 white_output = './../Car-Tracking-Data/white.mp4' # New video
-clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened2.mp4') # Original video
+clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened3.mp4') # Original video
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
 

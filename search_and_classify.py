@@ -43,8 +43,6 @@ spatial_feat = parameters['spatial_feat']
 hist_feat = parameters['hist_feat']
 hog_feat = parameters['hog_feat']
 
-max_sigma = 150
-
 print('\nUsing:',orient,'orientations',pix_per_cell,
     'pixels per cell and', cell_per_block,'cells per block')
 
@@ -85,17 +83,20 @@ def process_image(image):
     a = draw_boxes(draw_image, hot_windows, color=(0, 255, 0), thick=4)  
     # hot_windows = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.15)
     # Average over windows with previous windows
-    if len(Window.current_windows) == 0:
-        pass
-    elif len(Window.previous_windows) == 0:
-        hot_windows += Window.current_windows
-    else:
-        hot_windows += Window.current_windows
-        hot_windows += Window.previous_windows
-    hot_windows, labels = combine_boxes(hot_windows, image.shape, max_sigma=max_sigma, threshold=0.1)
-    Window.previous_windows = Window.current_windows
-    if len(hot_windows) > 0:
-        Window.current_windows = hot_windows
+    # Combine overlapping windows
+    hot_windows = combine_boxes(hot_windows, image.shape)
+    if len(Window.windows1) == 0:
+        Window.windows1 = hot_windows
+        Window.windows2 = hot_windows
+        Window.windows3 = hot_windows
+    # Average windows over windows from previous frames
+    results = average_boxes(hot_windows, 
+        Window.windows1, Window.windows2, Window.windows3,
+        image.shape)
+    # Reassign window values in a class
+    Window.windows3 = copy.copy(Window.windows2)
+    Window.windows2 = copy.copy(Window.windows1)
+    Window.windows1 = results
     # Return the original image with boxes    
     return draw_boxes(a, hot_windows, color=(0, 0, 255), thick=6), labels
 
@@ -103,8 +104,7 @@ Window = Window()
 for i in range(1,6):
     image = mpimg.imread('./../Car-Tracking-Data/examples/test{}.jpg'.format(i))
     
-    Window.current_windows = []
-    Window.previous_windows = []    
+    Window.windows1 = []
 
     window_img, labels = process_image(image)
     fig, axes = plt.subplots(ncols=2, figsize=(15, 7), sharex=True, sharey=True, subplot_kw={'adjustable':'box-forced'})
