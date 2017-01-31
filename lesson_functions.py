@@ -234,12 +234,12 @@ def find_windows_from_heatmap(image):
     # Turn every nonzero to one
     image = image.astype(np.uint8)
     # Smooth the image
-    image = rank.mean(image, disk(2))
+    image = rank.mean(image, disk(10))
     # Threshold the heatmap
-    if np.unique(image)[-1] <= 3:
-        thres = 0
-    else:
-        thres = 1      
+    # if np.unique(image)[-1] <= 2:
+    thres = 0
+    # else:
+    #     thres = 1
     image[image <= thres] = 0
     # Set labels
     labels = ndi.label(image)
@@ -257,6 +257,7 @@ def find_windows_from_heatmap(image):
 
 def combine_boxes(windows, image_shape):
     hot_windows = []
+    labels = []
     if len(windows)>0:
         # Create heatmap with windows
         image = create_heatmap(windows, image_shape)
@@ -267,47 +268,88 @@ def combine_boxes(windows, image_shape):
 # Define a class to receive the characteristics of each line detection
 class Window():
     def __init__(self):
-        # windows for the most recent image
-        self.windows1 = []
-        # windows for the previous image
-        self.windows2 = []
-        # windows with high probability
-        self.windows3 = []
+        self.probability = []
 
 # Calculate the distance between two points
+# didn't do sqrt to shorten the time
 def calc_distance(a, b):
-    return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+    return (a[0] - b[0])**2 + (a[1] - b[1])**2
 
 def find_center(box):
     startx, starty = box[0]
     endx, endy = box[1]
     # Find the center of the box
-    return [((startx+endx)/2.), ((starty+endy)/2.)]
+    return ((startx+endx)/2., (starty+endy)/2.)
 
-# box1 current box
-# box2 previous box
-def average_windows(box1, box2):
-    startx, starty = box1[0]
-    endx, endy = box1[1]
-    startx1, starty1 = box2[0]
-    endx1, endy1 = box2[1]
-    x, y = find_center(box1)
-    x = int(x)
-    y = int(y)
-    w = 3
-    width = int((((endx - startx) + (endx1 - startx1)*w) / (w+1))/2)
-    height = int((((endy - starty) + (endy1 - starty1)*w) / (w+1))/2)
-    return ((x-width, y-width), (x+width, y+width))
+# Find the width and the height of the box
+def find_radius(box):
+    startx, starty = box[0]
+    endx, endy = box[1]
+    return (endx - startx)/2, (endy - starty)/2
 
-def average_boxes(hot_windows, windows1, windows2, windows3,
+# Create an array for the center and the radius of the boxes
+def initialize_center_box(boxes):
+    result = []
+    for box in boxes:
+        center = find_center(box)
+        width, height = find_radius(box)
+        result.append((center, width, height, 1))
+    return result
+
+def sanity_check(old_center, new_center, old_width, new_width,
+    old_height, new_height):
+    if calc_distance(old_center, new_center) < 6400 and \
+                abs(old_width - new_width) < 50 and \
+                abs(old_height - new_height) < 50:
+        return True
+    else:
+        return False
+
+# Add an array for the center and the radius of the boxes
+def add_center_box(new_boxes, old_boxes):
+    fresh_boxes = []
+    temp_new_boxes = copy.copy(new_boxes)
+    for old_box in old_boxes:
+        old_center, old_width, old_height, old_prob = old_box
+        new_boxes = copy.copy(temp_new_boxes)
+        found = False
+        for new_box in new_boxes:
+            new_center, new_width, new_height, new_prob = new_box
+            if sanity_check(old_center, new_center, old_width, new_width, old_height, new_height):
+                fresh_box = [new_center, (new_width+3*old_width)/4., 
+                            (new_height+3*old_height)/4., min(10,old_prob+1)]
+                # remove the new box from an array
+                temp_new_boxes.remove(new_box)
+                found = True
+                break
+        # if no new_box is found, subtract the prob by 1
+        if not found:
+            fresh_box = [old_center, old_width, old_height, old_prob - 1]
+        # add the fresh box
+        fresh_boxes.append(fresh_box)
+    # append the leftover new boxes to old boxes
+    fresh_boxes += temp_new_boxes
+    # delete if prob = 0
+    temp_fresh_boxes = copy.copy(fresh_boxes)
+    for box in fresh_boxes:
+        if box[-1] <= 0:
+            temp_fresh_boxes.remove(box)
+    # return the updated old_boxes
+    return temp_fresh_boxes
+
+def average_boxes(hot_windows, old_boxes, 
+                  windows1, windows2, windows3,
                   image_shape):
-    hot_heatmap = create_heatmap(hot_windows, image_shape) * 2
-    heatmap1 = create_heatmap(windows1, image_shape)
-    heatmap2 = create_heatmap(windows2, image_shape)
-    heatmap3 = create_heatmap(windows3, image_shape)
-    new_heatmap = hot_heatmap + heatmap1 + heatmap2 + heatmap3
-    # plt.imshow(new_heatmap, cmap="hot")
-    # plt.title(np.unique(new_heatmap))
-    # plt.show()
-    windows, _ = find_windows_from_heatmap(new_heatmap)
-    return windows
+    hot_boxes = initialize_center_box(hot_windows)
+    new_boxes = add_center_box(hot_boxes, old_boxes)
+    print('new_boxes', new_boxes)
+    filtered_boxes = []
+    for new_box in new_boxes:
+        if new_box[-1] > 1:
+            filtered_boxes.append(new_box)
+    new_windows = []
+    for filtered_box in filtered_boxes:
+        new_center, new_width, new_height, new_prob = filtered_box
+        new_windows.append(((int(new_center[0]-new_width), int(new_center[1]-new_height)), 
+            (int(new_center[0]+new_width), int(new_center[1]+new_height))))
+    return new_windows, new_boxes

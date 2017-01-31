@@ -12,52 +12,14 @@ from skimage.feature import hog
 from sklearn.model_selection import train_test_split
 
 # Reload the data
-pickle_file = './../Car-Tracking-Data/features.pickle'
+pickle_file = './../Car-Tracking-Data/svc.pickle'
 with open(pickle_file, 'rb') as f:
     pickle_data = pickle.load(f)
-    X_train = pickle_data['train_dataset']
-    y_train = pickle_data['train_labels']
-    X_test = pickle_data['test_dataset']
-    y_test = pickle_data['test_labels']
+    svc = pickle_data['svc']
     X_scaler = pickle_data['X_scaler']
-    parameters = pickle_data['parameters']
     del pickle_data  # Free up memory
 
-print('Data and modules loaded.')
-print("train_features size:", X_train.shape)
-print("train_labels size:", y_train.shape)
-print("test_features size:", X_test.shape)
-print("test_labels size:", y_test.shape)
-print("parameters:")
-for k in parameters:
-    print(k, ":", parameters[k])
-
-color_space = parameters['color_space']
-orient = parameters['orient']
-pix_per_cell = parameters['pix_per_cell']
-cell_per_block = parameters['cell_per_block']
-hog_channel = parameters['hog_channel']
-spatial_size = parameters['spatial_size']
-hist_bins = parameters['hist_bins']
-spatial_feat = parameters['spatial_feat']
-hist_feat = parameters['hist_feat']
-hog_feat = parameters['hog_feat']
-
-print('\nUsing:',orient,'orientations',pix_per_cell,
-    'pixels per cell and', cell_per_block,'cells per block')
-
-# Use a linear SVC 
-svc = LinearSVC(max_iter=10000)
-# Check the training time for the SVC
-t=time.time()
-svc.fit(X_train, y_train)
-t2 = time.time()
-print('')
-print(round(t2-t, 2), 'Seconds to train SVC...')
-# Check the score of the SVC
-print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
-# Check the prediction time for a single sample
-t=time.time()
+print('Model loaded.')
 
 image = mpimg.imread('./../Car-Tracking-Data/examples/test3.jpg')
 image = image.astype(np.float32)/255
