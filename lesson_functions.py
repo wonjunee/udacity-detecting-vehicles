@@ -231,12 +231,7 @@ def create_heatmap(windows, image_shape):
 
 def find_windows_from_heatmap(image):
     hot_windows = []
-    # Turn every nonzero to one
-    image = image.astype(np.uint8)
-    # Smooth the image
-    image = rank.mean(image, disk(10))
     # Threshold the heatmap
-    # if np.unique(image)[-1] <= 2:
     thres = 0
     # else:
     #     thres = 1
@@ -298,6 +293,8 @@ def initialize_center_box(boxes):
 
 def sanity_check(old_center, new_center, old_width, new_width,
     old_height, new_height):
+    # check if the centers of the boxes are close and 
+    # widths and heights are similar.
     if calc_distance(old_center, new_center) < 6400 and \
                 abs(old_width - new_width) < 50 and \
                 abs(old_height - new_height) < 50:
@@ -307,8 +304,12 @@ def sanity_check(old_center, new_center, old_width, new_width,
 
 # Add an array for the center and the radius of the boxes
 def add_center_box(new_boxes, old_boxes):
-    fresh_boxes = []
+    fresh_boxes = [] # initiate the fresh boxes
+    max_confidence = 10 # the prob won't exceed this value
     temp_new_boxes = copy.copy(new_boxes)
+    # iterate through old_boxes to see if a similar window is
+    # found in new boxes. If found, increase the confidence level by 1
+    # If not, then decrease it by 1
     for old_box in old_boxes:
         old_center, old_width, old_height, old_prob = old_box
         new_boxes = copy.copy(temp_new_boxes)
@@ -317,12 +318,13 @@ def add_center_box(new_boxes, old_boxes):
             new_center, new_width, new_height, new_prob = new_box
             if sanity_check(old_center, new_center, old_width, new_width, old_height, new_height):
                 fresh_box = [new_center, (new_width+3*old_width)/4., 
-                            (new_height+3*old_height)/4., min(10,old_prob+1)]
+                            (new_height+3*old_height)/4., 
+                            min(max_confidence,old_prob+1)]
                 # remove the new box from an array
                 temp_new_boxes.remove(new_box)
                 found = True
                 break
-        # if no new_box is found, subtract the prob by 1
+        # if no new_box is found, subtract the confidence by 1
         if not found:
             fresh_box = [old_center, old_width, old_height, old_prob - 1]
         # add the fresh box
@@ -337,19 +339,22 @@ def add_center_box(new_boxes, old_boxes):
     # return the updated old_boxes
     return temp_fresh_boxes
 
+# Compare the new boxes with boxes from previous frames.
 def average_boxes(hot_windows, old_boxes, 
-                  windows1, windows2, windows3,
                   image_shape):
     hot_boxes = initialize_center_box(hot_windows)
     new_boxes = add_center_box(hot_boxes, old_boxes)
     print('new_boxes', new_boxes)
     filtered_boxes = []
     for new_box in new_boxes:
-        if new_box[-1] > 1:
+        # Draw boxes only if the confidence level is above 1
+        if new_box[-1] > 2:
             filtered_boxes.append(new_box)
     new_windows = []
+    # convert center-width-height to lefttop-rightbottom format
     for filtered_box in filtered_boxes:
         new_center, new_width, new_height, new_prob = filtered_box
         new_windows.append(((int(new_center[0]-new_width), int(new_center[1]-new_height)), 
             (int(new_center[0]+new_width), int(new_center[1]+new_height))))
+    # return the boxes with high confidence and new set of probability array
     return new_windows, new_boxes
