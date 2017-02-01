@@ -223,12 +223,15 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
     # Return list of feature vectors
     return np.concatenate(img_features)
 
+# Convert windows to heatmap numpy array.
 def create_heatmap(windows, image_shape):
     background = np.zeros(image_shape[:2])
     for window in windows:
         background[window[0][1]:window[1][1], window[0][0]:window[1][0]] += 1
     return background
 
+# find the nonzero areas from a heatmap and
+# turn them to windows
 def find_windows_from_heatmap(image):
     hot_windows = []
     # Threshold the heatmap
