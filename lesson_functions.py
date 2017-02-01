@@ -288,7 +288,8 @@ def initialize_center_box(boxes):
     for box in boxes:
         center = find_center(box)
         width, height = find_radius(box)
-        result.append((center, width, height, 1))
+        move = (0, 0) # movement of an object
+        result.append((center, width, height, move, 1))
     return result
 
 def sanity_check(old_center, new_center, old_width, new_width,
@@ -302,23 +303,42 @@ def sanity_check(old_center, new_center, old_width, new_width,
     else:
         return False
 
+# smoothing the change of center locations
+def average_centers(new_center, old_center):
+    w = 2. # weight parameter
+    return ((new_center[0]+old_center[0]*w)/(w+1),
+            (new_center[1]+old_center[1]*w)/(w+1))
+
+# calculate the movement of an object
+def calculate_move(new_center, old_center, old_move):
+    w = 3. # weight parameter
+    return ((new_center[0]-old_center[0]+w*old_move[0])/(w+1),
+        (new_center[1]-old_center[1]+w*old_move[1])/(w+1))
+
+# move the center by move value
+def add_center_move(center, move):
+    return (center[0]+move[0]/3, center[1]+move[1]/3)
+
 # Add an array for the center and the radius of the boxes
 def add_center_box(new_boxes, old_boxes):
     fresh_boxes = [] # initiate the fresh boxes
     max_confidence = 10 # the prob won't exceed this value
     temp_new_boxes = copy.copy(new_boxes)
+    w = 3 # weight parameter
     # iterate through old_boxes to see if a similar window is
     # found in new boxes. If found, increase the confidence level by 1
     # If not, then decrease it by 1
     for old_box in old_boxes:
-        old_center, old_width, old_height, old_prob = old_box
+        old_center, old_width, old_height, old_move, old_prob = old_box
         new_boxes = copy.copy(temp_new_boxes)
         found = False
         for new_box in new_boxes:
-            new_center, new_width, new_height, new_prob = new_box
+            new_center, new_width, new_height, new_move, new_prob = new_box
             if sanity_check(old_center, new_center, old_width, new_width, old_height, new_height):
-                fresh_box = [new_center, (new_width+3*old_width)/4., 
-                            (new_height+3*old_height)/4., 
+                fresh_box = [average_centers(new_center, old_center), 
+                            (new_width+w*old_width)/(w+1), 
+                            (new_height+w*old_height)/(w+1), 
+                            calculate_move(new_center, old_center, old_move),
                             min(max_confidence,old_prob+1)]
                 # remove the new box from an array
                 temp_new_boxes.remove(new_box)
@@ -326,7 +346,7 @@ def add_center_box(new_boxes, old_boxes):
                 break
         # if no new_box is found, subtract the confidence by 1
         if not found:
-            fresh_box = [old_center, old_width, old_height, old_prob - 1]
+            fresh_box = [add_center_move(old_center, old_move), old_width, old_height, old_move, old_prob - 1]
         # add the fresh box
         fresh_boxes.append(fresh_box)
     # append the leftover new boxes to old boxes
@@ -344,16 +364,16 @@ def average_boxes(hot_windows, old_boxes,
                   image_shape):
     hot_boxes = initialize_center_box(hot_windows)
     new_boxes = add_center_box(hot_boxes, old_boxes)
-    print('new_boxes', new_boxes)
+    # print('new_boxes', new_boxes)
     filtered_boxes = []
     for new_box in new_boxes:
         # Draw boxes only if the confidence level is above 1
-        if new_box[-1] > 2:
+        if new_box[-1] > 3:
             filtered_boxes.append(new_box)
     new_windows = []
     # convert center-width-height to lefttop-rightbottom format
     for filtered_box in filtered_boxes:
-        new_center, new_width, new_height, new_prob = filtered_box
+        new_center, new_width, new_height,new_move, new_prob = filtered_box
         new_windows.append(((int(new_center[0]-new_width), int(new_center[1]-new_height)), 
             (int(new_center[0]+new_width), int(new_center[1]+new_height))))
     # return the boxes with high confidence and new set of probability array

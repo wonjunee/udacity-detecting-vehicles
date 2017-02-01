@@ -73,12 +73,12 @@ def process_image(image):
                                     Window.probability,
                                     image.shape)
     # Return an image with boxes drawn
-    return draw_boxes(draw_image, results, color=(0, 0, 255), thick=2)  
+    return draw_boxes(draw_image, results, color=(0, 0, 255), thick=6)  
 
 Window = Window()
 # Draw boxes on a video stream
 white_output = './../Car-Tracking-Data/white.mp4' # New video
-clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened1.mp4') # Original video
+# clip1 = VideoFileClip('./../Car-Tracking-Data/project_video_shortened1.mp4') # Original video
 clip1 = VideoFileClip('./../Car-Tracking-Data/project_video.mp4') # Original video
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
