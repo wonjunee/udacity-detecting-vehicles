@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 
 
 # Reload the data
-pickle_file = './../Car-Tracking-Data/svc.pickle'
+pickle_file = './../../Car-Tracking-Data/svc.pickle'
 with open(pickle_file, 'rb') as f:
     pickle_data = pickle.load(f)
     svc = pickle_data['svc']
@@ -35,7 +35,7 @@ hog_feat = parameters['hog_feat']
 
 print('Model and parameters loaded.')
 
-image = mpimg.imread('./../Car-Tracking-Data/examples/test3.jpg')
+image = mpimg.imread('./../../Car-Tracking-Data/examples/test3.jpg')
 
 windows = slide_window(image, x_start_stop=[None, None], y_start_stop=[400, 500], 
                     xy_window=(96, 96), xy_overlap=(0.75, 0.75))
@@ -95,7 +95,7 @@ Window = Window()
 
 
 for i in range(1,2):
-    image = mpimg.imread('./../Car-Tracking-Data/examples/test{}.jpg'.format(i))
+    image = mpimg.imread('./../../Car-Tracking-Data/examples/test{}.jpg'.format(i))
     
     Window.probability = []
 

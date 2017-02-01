@@ -298,7 +298,7 @@ def sanity_check(old_center, new_center, old_width, new_width,
     old_height, new_height):
     # check if the centers of the boxes are close and 
     # widths and heights are similar.
-    if calc_distance(old_center, new_center) < 6400 and \
+    if calc_distance(old_center, new_center) < 5000 and \
                 abs(old_width - new_width) < 50 and \
                 abs(old_height - new_height) < 50:
         return True
@@ -319,7 +319,7 @@ def calculate_move(new_center, old_center, old_move):
 
 # move the center by move value
 def add_center_move(center, move):
-    return (center[0]+move[0]/3, center[1]+move[1]/3)
+    return (center[0]+move[0]/5, center[1]+move[1]/5)
 
 # Add an array for the center and the radius of the boxes
 def add_center_box(new_boxes, old_boxes):
@@ -333,7 +333,7 @@ def add_center_box(new_boxes, old_boxes):
     for old_box in old_boxes:
         old_center, old_width, old_height, old_move, old_prob = old_box
         new_boxes = copy.copy(temp_new_boxes)
-        if old_prob > max_confidence/4:
+        if old_prob > 10:
             add_prob = 2
         else:
             add_prob = 1
@@ -382,5 +382,23 @@ def average_boxes(hot_windows, old_boxes,
         new_center, new_width, new_height,new_move, new_prob = filtered_box
         new_windows.append(((int(new_center[0]-new_width), int(new_center[1]-new_height)), 
             (int(new_center[0]+new_width), int(new_center[1]+new_height))))
+    # Create a heatmap
+    heatmap = create_heatmap(new_windows, image_shape)
+    # Check if there is any overlap of windows
+    if np.unique(heatmap)[-1] >= 2:
+        labels = ndi.label(heatmap)[0]
+        heatmap_2 = np.zeros_like(heatmap)
+        heatmap_2[heatmap>=2] = 1
+        labels_2 = ndi.label(heatmap_2)
+        array_2 = np.argwhere(labels_2[0])
+        for car_number in range(1, labels_2[1]+1):
+            # Find pixels with each car_number label value
+            nonzero = (labels_2[0] == car_number).nonzero()
+            # Identify x and y values of those pixels
+            num = labels[nonzero[0][0], nonzero[1][0]]
+            labels[labels == num] = 0
+        heatmap = labels + heatmap_2
+        new_windows = find_windows_from_heatmap(heatmap)
+
     # return the boxes with high confidence and new set of probability array
     return new_windows, new_boxes

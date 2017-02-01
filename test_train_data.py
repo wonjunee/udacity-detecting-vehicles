@@ -28,11 +28,11 @@ if save_features:
     cars = []
     notcars = []
 
-    cars_images = glob.glob('./../Car-Tracking-Data/vehicles/*')
+    cars_images = glob.glob('./../../Car-Tracking-Data/vehicles/*')
     for folder in cars_images:
         cars += glob.glob('{}/*.png'.format(folder))
 
-    notcars_images = glob.glob('./../Car-Tracking-Data/non-vehicles/*')
+    notcars_images = glob.glob('./../../Car-Tracking-Data/non-vehicles/*')
     for folder in notcars_images:
         notcars += glob.glob('{}/*.png'.format(folder))
 
@@ -101,7 +101,7 @@ if save_features:
     print('Feature vector length:', len(X_train[0]))
 
     # Save the data for easy access
-    pickle_file = './../Car-Tracking-Data/features.pickle'
+    pickle_file = './../../Car-Tracking-Data/features.pickle'
     if not os.path.isfile(pickle_file):
         print('Saving data to pickle file...')
         try:
@@ -122,7 +122,7 @@ if save_features:
 
 if save_model:
     # Reload the data
-    pickle_file = './../Car-Tracking-Data/features.pickle'
+    pickle_file = './../../Car-Tracking-Data/features.pickle'
     with open(pickle_file, 'rb') as f:
         pickle_data = pickle.load(f)
         X_train = pickle_data['train_dataset']
@@ -168,7 +168,7 @@ if save_model:
     t=time.time()
 
     # Save the model for easy access
-    pickle_file = './../Car-Tracking-Data/svc.pickle'
+    pickle_file = './../../Car-Tracking-Data/svc.pickle'
     if not os.path.isfile(pickle_file):
         print('Saving data to pickle file...')
         try:

@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 
 
 # Drawing random boxes on an image
-image = mpimg.imread('./../Car-Tracking-Data/examples/test5.jpg')
+image = mpimg.imread('./../../Car-Tracking-Data/examples/test5.jpg')
 draw_image = np.copy(image)
 image = image.astype(np.float32)/255
 
@@ -24,11 +24,11 @@ image = image.astype(np.float32)/255
 cars = []
 notcars = []
 
-cars_images = glob.glob('./../Car-Tracking-Data/vehicles/*')
+cars_images = glob.glob('./../../Car-Tracking-Data/vehicles/*')
 for folder in cars_images:
     cars += glob.glob('{}/*.png'.format(folder))
 
-notcars_images = glob.glob('./../Car-Tracking-Data/non-vehicles/*')
+notcars_images = glob.glob('./../../Car-Tracking-Data/non-vehicles/*')
 for folder in notcars_images:
     notcars += glob.glob('{}/*.png'.format(folder))
 
