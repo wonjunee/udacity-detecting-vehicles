@@ -64,7 +64,7 @@ def process_image(image):
                         hog_channel=hog_channel, spatial_feat=spatial_feat, 
                         hist_feat=hist_feat, hog_feat=hog_feat)
     # Combine overlapping windows
-    hot_windows, _ = combine_boxes(hot_windows, image.shape)
+    hot_windows = combine_boxes(hot_windows, image.shape)
 
     # Average windows over windows from previous frames
     results, Window.probability = average_boxes(hot_windows, 

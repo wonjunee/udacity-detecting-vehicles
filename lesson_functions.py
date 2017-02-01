@@ -236,8 +236,6 @@ def find_windows_from_heatmap(image):
     hot_windows = []
     # Threshold the heatmap
     thres = 0
-    # else:
-    #     thres = 1
     image[image <= thres] = 0
     # Set labels
     labels = ndi.label(image)
@@ -251,17 +249,18 @@ def find_windows_from_heatmap(image):
         # Define a bounding box based on min/max x and y
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
         hot_windows.append(bbox)
-    return hot_windows, labels[0]
+    return hot_windows
 
 def combine_boxes(windows, image_shape):
     hot_windows = []
-    labels = []
+    image = None
     if len(windows)>0:
         # Create heatmap with windows
         image = create_heatmap(windows, image_shape)
         # find boxes from heatmap
-        hot_windows, labels = find_windows_from_heatmap(image)
-    return hot_windows, labels
+        hot_windows = find_windows_from_heatmap(image)
+    # return new windows
+    return hot_windows
 
 # Define a class to receive the characteristics of each line detection
 class Window():
@@ -314,7 +313,7 @@ def average_centers(new_center, old_center):
 
 # calculate the movement of an object
 def calculate_move(new_center, old_center, old_move):
-    w = 3. # weight parameter
+    w = 6. # weight parameter
     return ((new_center[0]-old_center[0]+w*old_move[0])/(w+1),
         (new_center[1]-old_center[1]+w*old_move[1])/(w+1))
 
@@ -325,7 +324,7 @@ def add_center_move(center, move):
 # Add an array for the center and the radius of the boxes
 def add_center_box(new_boxes, old_boxes):
     fresh_boxes = [] # initiate the fresh boxes
-    max_confidence = 10 # the prob won't exceed this value
+    max_confidence = 40 # the prob won't exceed this value
     temp_new_boxes = copy.copy(new_boxes)
     w = 3 # weight parameter
     # iterate through old_boxes to see if a similar window is
@@ -334,6 +333,10 @@ def add_center_box(new_boxes, old_boxes):
     for old_box in old_boxes:
         old_center, old_width, old_height, old_move, old_prob = old_box
         new_boxes = copy.copy(temp_new_boxes)
+        if old_prob > max_confidence/4:
+            add_prob = 2
+        else:
+            add_prob = 1
         found = False
         for new_box in new_boxes:
             new_center, new_width, new_height, new_move, new_prob = new_box
@@ -342,7 +345,7 @@ def add_center_box(new_boxes, old_boxes):
                             (new_width+w*old_width)/(w+1), 
                             (new_height+w*old_height)/(w+1), 
                             calculate_move(new_center, old_center, old_move),
-                            min(max_confidence,old_prob+1)]
+                            min(max_confidence,old_prob+add_prob)]
                 # remove the new box from an array
                 temp_new_boxes.remove(new_box)
                 found = True
@@ -371,7 +374,7 @@ def average_boxes(hot_windows, old_boxes,
     filtered_boxes = []
     for new_box in new_boxes:
         # Draw boxes only if the confidence level is above 1
-        if new_box[-1] > 3:
+        if new_box[-1] > 2:
             filtered_boxes.append(new_box)
     new_windows = []
     # convert center-width-height to lefttop-rightbottom format

@@ -40,7 +40,7 @@ windows += slide_window(image, x_start_stop=[None, None], y_start_stop=[460, 580
 
 hot_windows = windows
 # Draw an image with boxes
-window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)                    
+window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=2)                    
 plt.imshow(window_img)
 plt.title('draw boxes')
 plt.show()
