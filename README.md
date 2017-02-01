@@ -13,10 +13,18 @@ In this project, I developed a model that detects cars from a video stream and d
 
 The labeled data for vehicle and non-vehicle examples to train your classifier come from a combination of the [**GTI vehicle image database**](http://www.gti.ssr.upm.es/data/Vehicle_database.html), the [**KITTI vision benchmark suite**](http://www.cvlibs.net/datasets/kitti/), and examples extracted from the project video itself.
 
-
-
-
 When training the model, **SVM (Support Vector Machine)** was used.
+
+Below is the description of folders in the repository.
+
+- **README.ipynb, README.md**: The documents you are reading now.
+- **project-files folder**
+    - **test_train_data.py**: The first thing to run for the project. This will extract features from data and create train and test data. Then it will build a machine learning model based on the data. Everything will be saved as **pickle** files.
+    - **lesson_functions.py**: It contains all necessary functions including functions that extract features from images and functions that identify false positives.
+    - **search_and_classify.py**: It takes few example images and draws boxes on cars based on the model's prediction.
+    - **search_and_classify_video.py**: Same as the above except it will produce video data.
+- **Lab folder**: It contains python scripts that I used for experiments.
+- **images folder**: It contains **png** files that are used in this **README**.
 
 ---
 ## Creating Features
@@ -124,7 +132,7 @@ After repeating this procedure many times with different sets of parameters, I f
 
 Below is the set of windows that I used to detect the cars from video stream. Small windows are located at the center and as the size of windows gets larger, they become closer to the bottom of the image.
 
-![alt text](sliding_windows.png "Sliding Windows")
+![alt text](./images/sliding_windows.png "Sliding Windows")
 
 ### Code for Sliding Window Search
     # Define a function that takes an image,
@@ -185,7 +193,7 @@ Below is the set of windows that I used to detect the cars from video stream. Sm
 
 The model predicts a label (car or notcar) from an image inside each window. If a car is detected, then a rectangle is drawn. Below are example images with boxes drawn by the model.
 
-![alt text](windows_detected.png "Detected Windows")
+![alt text](./images/windows_detected.png "Detected Windows")
 
 ### Combining Windows With A Heatmap
 When a car is detected, multiple boxes are drawn on the car, so I used a **heatmap** to combine boxes into a single box.
@@ -224,7 +232,7 @@ More details about a **label** function can be found [here](https://docs.scipy.o
 
 Below are example images. Blue boxes are combined boxes.
 
-![alt text](image_with_heatmap.png "Detected Windows")
+![alt text](./images/image_with_heatmap.png "Detected Windows")
 
 ---
 ## Video Implementation
@@ -299,7 +307,7 @@ Then **average_boxes** function is used to compare new windows from current fram
 
 Here's a [link](https://www.youtube.com/watch?v=dQvC2SWOD5U) to my video result
 
-![alt text](video_sample.png "video")
+![alt text](./images/video_sample.png "video")
 
 ---
 ## Discussion
