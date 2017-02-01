@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 from moviepy.editor import VideoFileClip
 
 # Reload the data
-pickle_file = './../Car-Tracking-Data/svc.pickle'
+pickle_file = './../../Car-Tracking-Data/svc.pickle'
 with open(pickle_file, 'rb') as f:
     pickle_data = pickle.load(f)
     svc = pickle_data['svc']

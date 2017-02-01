@@ -66,33 +66,15 @@ def process_image(image):
     draw_image = draw_boxes(draw_image, hot_windows, color=(255, 0, 0), thick=6)
     combined_windows = combine_boxes(hot_windows, image.shape)
 
-    # # Average windows over windows from previous frames
-    # results, Window.probability = average_boxes(hot_windows, 
-    #                                 Window.probability,
-    #                                 image.shape)
+    # Average windows over windows from previous frames
+    results, Window.probability = average_boxes(hot_windows, 
+                                    Window.probability,
+                                    image.shape)
 
-    results = combined_windows
     # Return an image with boxes drawn
     return draw_boxes(draw_image, results, color=(0, 0, 255), thick=3), hot_windows
 
 Window = Window()
-
-# fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(15, 7), sharex=True, sharey=True, subplot_kw={'adjustable':'box-forced'})
-# (ax0, ax1), (ax2, ax3) = axes
-# image = mpimg.imread('./../Car-Tracking-Data/examples/test{}.jpg'.format(1))
-# window_img = process_image(image)
-# ax0.imshow(window_img)
-# image = mpimg.imread('./../Car-Tracking-Data/examples/test{}.jpg'.format(2))
-# window_img = process_image(image)
-# ax1.imshow(window_img)
-# image = mpimg.imread('./../Car-Tracking-Data/examples/test{}.jpg'.format(3))
-# window_img = process_image(image)
-# ax2.imshow(window_img)
-# image = mpimg.imread('./../Car-Tracking-Data/examples/test{}.jpg'.format(4))
-# window_img = process_image(image)
-# ax3.imshow(window_img)
-# plt.show()
-
 
 for i in range(1,2):
     image = mpimg.imread('./../../Car-Tracking-Data/examples/test{}.jpg'.format(i))
